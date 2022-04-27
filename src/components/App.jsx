@@ -1,213 +1,62 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import ContactsList from 'components/ContactsList/ContactsList';
-import Form from 'components/Form/Form';
-import Filter from 'components/Filter/Filter';
-import shortid from 'shortid';
-import s from './App.module.css';
+import { useState } from 'react';
+import Modal from 'components/Modal/Modal';
+import Searchbar from 'components/Searchbar/Searchbar';
+import ImageInfo from 'components/ImageInfo/ImageInfo';
+import Button from 'components/Button/Button';
 
 const App = () => {
-  const [contacts, setContacts] = useState([]);
-  const [filterWords, setFilterWords] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [src, setSrc] = useState('');
+  const [alt, setAlt] = useState('');
+  const [moreVisible, setMoreVisible] = useState(false);
 
-  const save = (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      return null;
+  // Функция для смены состояния модального окна с видимого на невидимое и получения данных для показа в модалке
+  const toggleModal = e => {
+    if (!showModal) {
+      setSrc(e.target.dataset.src);
+      setAlt(e.target.alt);
+      setShowModal(true);
+    } else {
+      setShowModal(false);
     }
   };
 
-  const get = key => {
-    try {
-      return JSON.parse(localStorage.getItem(key));
-    } catch (error) {
-      return null;
-    }
+  //Функция для получения из формы текста введенного пользователем в инпут
+  const submitForm = value => {
+    setPage(1);
+    setSearchQuery(value);
   };
 
-  useEffect(() => {
-    const parsedContacts = get('contacts');
-    if (parsedContacts) {
-      setContacts(parsedContacts);
-    }
-  }, []);
+  // Функция для показа или скрытия кнопки "Загрузить еще"
+  const moreButtonRender = () => setMoreVisible(true);
+  const moreButtonHide = () => setMoreVisible(false);
 
-  useEffect(() => {
-    save('contacts', contacts);
-  }, [contacts]);
-
-  const formSubmitHandler = data => {
-    const normalizedName = data.name
-      .toLocaleLowerCase()
-      .split(' ')
-      .join('');
-    const ableToAddName = contacts.some(
-      contact =>
-        contact.name
-          .toLocaleLowerCase()
-          .split(' ')
-          .join('') === normalizedName
-    );
-    const normalizedNumber = data.number.split('-').join('');
-    const ableToAddNumber = contacts.some(
-      contact => contact.number.split('-').join('') === normalizedNumber
-    );
-    if (ableToAddName || ableToAddNumber) {
-      alert(
-        `${ableToAddName ? data.name : data.number} is already in contacts`
-      );
-      return;
-    }
-    addContact(data);
-  };
-
-  const addContact = contactNew => {
-    const contactAdd = {
-      id: shortid.generate(),
-      name: contactNew.name,
-      number: contactNew.number,
-    };
-    setContacts(prev => [...prev, contactAdd]);
-  };
-
-  const deleteContact = e => {
-    const smolllList = contacts.filter(contact => contact.id !== e.target.id);
-    setContacts(smolllList);
-  };
-
-  function changeFilter(e) {
-    return (() => setFilterWords(e.currentTarget.value))();
+  // Функция для увеличения страницы при нажатии на кнопку "Загрузить ещё"
+  function clickMoreButton() {
+    setPage(page => page + 1);
   }
 
-  const getVisibleContacts = () => {
-    if (!filterWords) {
-      return;
-    }
-    const normWord = filterWords.toLocaleLowerCase().trim();
-    const findContact = [...contacts].filter(contact =>
-      contact.name.toLocaleLowerCase().includes(normWord)
-    );
-    return findContact;
-  };
-
-  const vizibleContacts = getVisibleContacts();
-
   return (
-    <div className={s.wrapper}>
-      <h1 className={s.title}>Phonebook</h1>
-      <Form onSubmit={formSubmitHandler} />
-      <h1 className={s.title}>Contacts</h1>
-      <Filter value={filterWords} onChangeFilter={changeFilter} />
-      <ContactsList
-        vizibleContacts={vizibleContacts || contacts}
-        onDeleteContact={deleteContact}
+    <>
+      <Searchbar onSubmit={submitForm} />
+      <ImageInfo
+        searchQuery={searchQuery}
+        page={page}
+        onClick={toggleModal}
+        moreButtonRender={moreButtonRender}
+        moreButtonHide={moreButtonHide}
       />
-    </div>
+      {moreVisible && <Button onClick={clickMoreButton} />}
+
+      {showModal && (
+        <Modal onClose={toggleModal}>
+          <img src={src} alt={alt} />
+        </Modal>
+      )}
+    </>
   );
 };
+
 export default App;
-
-// ___________________________Example useState_________
-// const App = () => {
-//   // const [counter, setCounter] = useState(0);
-//   const [counter, setCounter] = useState(() => randomCounter());
-//   const [state, setState] = useState({ title: 'Counter', date: new Date() });
-
-//   function increment() {
-//     setCounter(prev => prev + 1);
-//   }
-//   function decrement() {
-//     setCounter(prev => prev - 1);
-//   }
-//   function randomCounter() {
-//     console.log('++++++++');
-//     return Math.trunc(Math.random() * 20);
-//   }
-//   function updateTitle() {
-//     setState(prev => {
-//       return { ...prev, title: 'newTitle' };
-//     });
-//   }
-
-//   return (
-//     <div>
-//       <h1>Счетчик{counter}</h1>
-//       <p></p>
-//       <button type="button" onClick={increment}>
-//         Добавить
-//       </button>
-//       <button type="button" onClick={decrement}>
-//         Убрать
-//       </button>
-//       <button type="button" onClick={updateTitle}>
-//         Change
-//       </button>
-//       <pre>{JSON.stringify(state, null, 2)}</pre>
-//     </div>
-//   );
-// };
-
-// export default App;
-
-// ___________________________Example useEffect_________
-
-// const App = () => {
-//   const [type, setType] = useState('users');
-//   const [data, setData] = useState([]);
-//   const [pos, setPos] = useState({ x: 0, y: 0 });
-//   const changeUsers = () => {
-//     setType('users');
-//   };
-//   const changeTodos = () => {
-//     setType('Todu');
-//   };
-//   const changePost = () => {
-//     setType('Пости');
-//   };
-
-//   const changeTitle = e => {
-//     setType(e.target.name);
-//   };
-//   const mouseMoveHandler = event => {
-//     setPos({ x: event.clientX, y: event.clientY });
-//   };
-//   useEffect(() => {
-//     fetch(`https://jsonplaceholder.typicode.com/${type}`)
-//       .then(response => response.json())
-//       .then(json => setData(json));
-//   }, [type]);
-
-//   useEffect(() => {
-//     console.log('ComponentDidMount');
-//     window.addEventListener('mousemove', mouseMoveHandler);
-
-//     return window.removeEventListener('mousemove', mouseMoveHandler);
-//   }, []);
-
-//   return (
-//     <div>
-//       <h1>Ресурс: {type}</h1>
-//       <button name="users" type="button" onClick={changeTitle}>
-//         Користувачі
-//       </button>
-//       <button name="todos" type="button" onClick={changeTitle}>
-//         Todos
-//       </button>
-//       <button name="posts" type="button" onClick={changeTitle}>
-//         Пости
-//       </button>
-//       <pre>{JSON.stringify(pos, null, 2)}</pre>;
-//     </div>
-//   );
-// };
-
-// export default App;
-
-// ___________________________Example useContext_________
-
-// const App = () => {
-//   const [value, setValue] = useRef('');
-//   return <div></div>;
-// };
-
-// export default App;
